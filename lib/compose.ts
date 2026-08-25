@@ -3,28 +3,12 @@ import type { Citation, Lesson, WebHit } from "@/lib/types";
 import { readLessonMarkdown, rewriteCourseImages } from "@/lib/course-files";
 
 function keepMarkdown(content: string): string {
-  return content
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/^#\s+.+$/m, "")
-    .replace(/^\s*-\s+Take me to.+$/gim, "")
-    .replace(/\[(?:Video Tutorial|Lecture)\]\([^)]+\)/gi, "")
-    .replace(/[ \t]+\n/g, "\n")
-    .replace(/^(#{1,6}\s+.+)$/gm, "\n$1\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return content.replace(/\r\n/g, "\n").trim();
 }
 
 export function formatLessonNotes(lesson: Lesson): string {
   const raw = readLessonMarkdown(lesson.path) ?? lesson.content;
-  const body = keepMarkdown(rewriteCourseImages(raw, lesson.path));
-  const parts = [`**${lesson.title}** — ${lesson.section}`];
-  if (body) parts.push(body);
-  if (lesson.videoUrl) {
-    parts.push(`Lecture: [${lesson.videoUrl}](${lesson.videoUrl})`);
-  }
-  parts.push(`Source: [${lesson.path}](${lesson.githubUrl})`);
-  parts.push("Ask a question about this lesson below.");
-  return parts.join("\n\n");
+  return keepMarkdown(rewriteCourseImages(raw, lesson.path));
 }
 
 function tidy(text: string): string {

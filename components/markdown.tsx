@@ -1,11 +1,28 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useState, type ReactNode } from "react";
+
+const GITHUB_RAW =
+  "https://raw.githubusercontent.com/kodekloudhub/certified-kubernetes-administrator-course/master/";
+
+function githubFallback(src: string): string | null {
+  const rel = src.replace(/^\/api\/course-assets\//, "");
+  if (rel === src) return null;
+  return GITHUB_RAW + rel;
+}
 
 function CourseImage({ alt, src }: { alt: string; src: string }) {
+  const [current, setCurrent] = useState(src);
+  const fallback = githubFallback(src);
+
   return (
     <img
       alt={alt}
-      src={src}
-      className="my-1 max-w-full border border-[#2b2b2b] bg-[#1a1a1a]"
+      src={current}
+      onError={() => {
+        if (fallback && current !== fallback) setCurrent(fallback);
+      }}
+      className="block h-auto w-full max-w-full border border-[#2b2b2b] bg-[#1a1a1a]"
     />
   );
 }
@@ -74,84 +91,129 @@ function inline(text: string): ReactNode[] {
   return parts;
 }
 
-function renderBlock(block: string, index: number) {
-  return block
-    .split(/\n\n+/)
-    .map((para) => para.trim())
-    .filter(Boolean)
-    .map((para, paraIndex) => {
-      const key = `${index}-${paraIndex}`;
-      const heading = para.match(/^(#{1,6})\s+([\s\S]+)$/);
-      if (heading && !heading[2].includes("![")) {
-        const text = heading[2].replace(/\n+/g, " ").trim();
-        return (
-          <p key={key} className="font-semibold text-[#f3f2f2]">
-            {inline(text)}
-          </p>
-        );
-      }
+function headingClass(level: number): string {
+  if (level <= 1) return "text-xl font-bold leading-snug text-[#f3f2f2]";
+  if (level === 2) return "text-lg font-semibold leading-snug text-[#f3f2f2]";
+  return "font-semibold leading-snug text-[#f3f2f2]";
+}
 
-      const imageOnly = para.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-      if (imageOnly) {
-        return <CourseImage key={key} alt={imageOnly[1]} src={imageOnly[2]} />;
-      }
+function renderProse(text: string, keyPrefix: string): ReactNode[] {
+  const lines = text.replace(/<br\s*\/?>/gi, "\n").split("\n");
+  const nodes: ReactNode[] = [];
+  let list: { ordered: boolean; items: string[] } | null = null;
+  let para: string[] = [];
+  let key = 0;
 
-      if (para.includes("![") && para.includes("\n")) {
-        return (
-          <div key={key} className="flex flex-col gap-3">
-            {para.split("\n").map((line, lineIndex) => {
-              const trimmed = line.trim();
-              if (!trimmed) return null;
-              const img = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-              if (img) {
-                return <CourseImage key={lineIndex} alt={img[1]} src={img[2]} />;
-              }
-              const subHeading = trimmed.match(/^(#{1,6})\s+(.+)$/);
-              if (subHeading) {
-                return (
-                  <p key={lineIndex} className="font-semibold text-[#f3f2f2]">
-                    {inline(subHeading[2])}
-                  </p>
-                );
-              }
-              return (
-                <p
-                  key={lineIndex}
-                  className="text-[15px] leading-[1.6] text-[#e2e2e2]"
-                >
-                  {inline(trimmed)}
-                </p>
-              );
-            })}
-          </div>
-        );
-      }
+  const flushList = () => {
+    if (!list || list.items.length === 0) {
+      list = null;
+      return;
+    }
+    const Tag = list.ordered ? "ol" : "ul";
+    const items = list.items;
+    nodes.push(
+      <Tag
+        key={`${keyPrefix}-list-${key}`}
+        className={`flex flex-col gap-1 text-[15px] leading-[1.6] text-[#e2e2e2] ${
+          list.ordered ? "list-decimal pl-5" : "list-disc pl-5"
+        }`}
+      >
+        {items.map((item, itemIndex) => (
+          <li key={itemIndex}>{inline(item)}</li>
+        ))}
+      </Tag>,
+    );
+    key += 1;
+    list = null;
+  };
 
-      const lines = para.split(/\n/).filter((line) => line.trim());
-      const listLike = lines.every((line) => /^[-*]\s+/.test(line.trim()));
-      if (listLike) {
-        return (
-          <ul
-            key={key}
-            className="flex flex-col gap-1 text-[15px] leading-[1.6] text-[#e2e2e2]"
-          >
-            {lines.map((item, itemIndex) => (
-              <li key={itemIndex}>{inline(item.replace(/^[-*]\s+/, ""))}</li>
-            ))}
-          </ul>
-        );
-      }
+  const flushPara = () => {
+    if (para.length === 0) return;
+    nodes.push(
+      <p
+        key={`${keyPrefix}-p-${key}`}
+        className="text-[15px] leading-[1.6] text-[#e2e2e2]"
+      >
+        {inline(para.join(" "))}
+      </p>,
+    );
+    key += 1;
+    para = [];
+  };
 
-      return (
-        <p key={key} className="text-[15px] leading-[1.6] text-[#e2e2e2]">
-          {inline(para)}
-        </p>
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const image = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+    const ul = trimmed.match(/^[-*]\s+(.+)$/);
+    const ol = trimmed.match(/^\d+[.)]\s+(.+)$/);
+
+    if (image) {
+      flushList();
+      flushPara();
+      nodes.push(
+        <CourseImage
+          key={`${keyPrefix}-img-${key}`}
+          alt={image[1]}
+          src={image[2]}
+        />,
       );
-    });
+      key += 1;
+      continue;
+    }
+
+    if (heading) {
+      flushList();
+      flushPara();
+      nodes.push(
+        <p
+          key={`${keyPrefix}-h-${key}`}
+          className={headingClass(heading[1].length)}
+        >
+          {inline(heading[2])}
+        </p>,
+      );
+      key += 1;
+      continue;
+    }
+
+    if (ul) {
+      flushPara();
+      if (!list || list.ordered) {
+        flushList();
+        list = { ordered: false, items: [] };
+      }
+      list.items.push(ul[1]);
+      continue;
+    }
+
+    if (ol) {
+      flushPara();
+      if (!list || !list.ordered) {
+        flushList();
+        list = { ordered: true, items: [] };
+      }
+      list.items.push(ol[1]);
+      continue;
+    }
+
+    if (!trimmed) {
+      flushList();
+      flushPara();
+      continue;
+    }
+
+    flushList();
+    para.push(trimmed);
+  }
+
+  flushList();
+  flushPara();
+  return nodes;
 }
 
 export function Markdown({ text }: { text: string }) {
-  const blocks = text.split(/```/);
+  const blocks = text.replace(/\r\n/g, "\n").split(/```/);
 
   return (
     <div className="flex flex-col gap-3">
@@ -168,7 +230,7 @@ export function Markdown({ text }: { text: string }) {
           );
         }
 
-        return renderBlock(block, index);
+        return renderProse(block, String(index));
       })}
     </div>
   );

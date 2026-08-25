@@ -454,14 +454,6 @@ export function LmsApp({ course }: { course: CourseOutline }) {
         role: "assistant",
         content: data.notes,
         kind: "notes",
-        source: "course",
-        citations: [
-          {
-            title: data.title,
-            url: data.githubUrl,
-            detail: data.section,
-          },
-        ],
       };
 
       if (existing) {
@@ -840,9 +832,9 @@ export function LmsApp({ course }: { course: CourseOutline }) {
             {visibleMessages.length === 0 && busy ? (
               <div className="flex flex-col gap-3">
                 <div className="text-xs uppercase tracking-[0.08em] text-[#ec3013]">
-                  Assistant
+                  Lesson
                 </div>
-                <div className="text-[15px] text-[#6b6b6b]">Loading notes…</div>
+                <div className="text-[15px] text-[#6b6b6b]">Loading lesson…</div>
               </div>
             ) : null}
             {visibleMessages.map((message) =>
@@ -858,10 +850,10 @@ export function LmsApp({ course }: { course: CourseOutline }) {
               ) : (
                 <div key={message.id} className="flex flex-col gap-3">
                   <div className="text-xs uppercase tracking-[0.08em] text-[#ec3013]">
-                    Assistant
-                    {message.source ? (
+                    {message.kind === "notes" ? "Lesson" : "Assistant"}
+                    {message.kind !== "notes" && message.source ? (
                       <span className="ml-2 tracking-[0.08em] text-[#6b6b6b]">
-                        · {message.kind === "notes" ? "Lesson" : message.source === "course" ? "CKA notes" : "Web"}
+                        · {message.source === "course" ? "CKA notes" : "Web"}
                       </span>
                     ) : null}
                   </div>
@@ -870,7 +862,9 @@ export function LmsApp({ course }: { course: CourseOutline }) {
                   ) : (
                     <div className="text-[15px] text-[#6b6b6b]">Thinking…</div>
                   )}
-                  {message.citations && message.citations.length > 0 ? (
+                  {message.kind !== "notes" &&
+                  message.citations &&
+                  message.citations.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {message.citations.map((citation) => (
                         <a
@@ -966,12 +960,9 @@ function EmptyState({
   return (
     <div className="flex flex-col gap-6 pt-6">
       <div className="flex flex-col gap-3">
-        <div className="text-xs uppercase tracking-[0.08em] text-[#ec3013]">
-          Assistant
-        </div>
         <p className="text-[15px] leading-[1.6] text-[#e2e2e2]">
-          Pick a lesson in the sidebar. I will show the CKA notes here. After you
-          read, ask a question about that topic.
+          Pick a lesson in the sidebar. The markdown for that lesson shows here.
+          Ask a question after you read — then Assistant answers.
         </p>
         {preview.length > 0 ? (
           <p className="text-[15px] leading-[1.6] text-[#e2e2e2]">
