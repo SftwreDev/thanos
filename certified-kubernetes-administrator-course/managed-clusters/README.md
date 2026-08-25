@@ -1,0 +1,25 @@
+# Managed Clusters
+
+Knowledge of managed clusters and how to build them is *not* part of the CKA course curriculum and therefore you will not be tested on it. These labs are provided just for fun and because people ask how to create them in KodeKloud playgrounds.
+
+Managed clusters are where part of the cluster is managed by a major cloud provider. The control plane is *always* managed in this type of cluster, meaning that you do not have to configure control plane nodes, high availability or manage etcd - all this is "managed" for you for a fixed cost per hour the cluster is in existence.
+
+Depending on the options chosen when creating, the worker nodes may be unmanaged, part or fully managed. However in the KodeKloud playgrounds only unmanaged nodes are available so that is what we will be creating.
+
+We have some instructions for building managed clusters in KodeKloud playgrounds below. These builds fit within the IAM constraints of our playgrounds.
+
+**NOTE** If you are deploying a cluster as part of a lab exercise in one of the other courses, then wherever this guide tells you to run commands in a CloudShell terminal you must instead run those commands in the lab's terminal.
+
+* AWS EKS
+
+    These builds avoid the use of `eksctl`, managed node groups and EKS Auto Mode, none of which are supported by playground.
+    * [Manual build using the console](./eks/console/README.md)
+    * [Automated build using Terraform](https://github.com/kodekloudhub/amazon-elastic-kubernetes-service-course/blob/main/docs/playground.md)
+* Azure AKS
+    * [Manual build using the console](./aks/console/README.md)
+    * [Automated build using Terraform](./aks/terraform/README.md) - From Azure CloudShell. Nothing to install on your laptop
+    * [Automated build using Terraform](./aks/terraform_local/README.md) - From your laptop. Requires you to install terraform, git, kubectl, azure client.
+* Google GKE
+    * [Manual build using the console](./gke/console/README.md)
+    * [Automated build using Terraform](./gke/terraform/README.md)
+
